@@ -1,0 +1,22 @@
+[Unit]
+Description=OnionAtlas control plane
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=onionatlas
+Group=onionatlas
+EnvironmentFile=/etc/onionatlas/control.env
+WorkingDirectory=/opt/onionatlas
+ExecStart=/opt/onionatlas/.venv/bin/onionatlas serve --host 127.0.0.1 --port 8080
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/onionatlas
+
+[Install]
+WantedBy=multi-user.target
