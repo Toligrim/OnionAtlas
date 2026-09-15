@@ -25,7 +25,7 @@ OnionAtlas — автономный движок обнаружения, обх�
 7. индексировать очищенный текст через SQLite FTS5;
 8. строить граф входящих/исходящих onion-ссылок;
 9. повторно проверять offline-сервисы с backoff;
-10. получать новые кандидаты не только из ссылок, но и из внешних discovery-источников;
+10. получать новые кандидаты не только из ссылок, но и из разрешённых внешних discovery-источников;
 11. измерять novelty/saturation каждого источника;
 12. автоматически переключаться между discovery-ветками при насыщении.
 
@@ -67,6 +67,16 @@ flowchart LR
 - [Безопасность и границы доверия](docs/SECURITY.md)
 - [Эксплуатация и ресурсы](docs/OPERATIONS.md)
 - [План v0.1 и критерии готовности](docs/V0.1_PLAN.md)
+- [Актуальный план разработки](docs/DEVELOPMENT_PLAN.md)
+- [External discovery sources](docs/EXTERNAL_SOURCES.md)
+- [Staging deployment](docs/STAGING_DEPLOYMENT.md)
+- [Handoff для OPS-агента](docs/OPS_AGENT_STAGING.md)
+
+## Текущий development gate
+
+Рабочая реализация v0.1 развивается в feature-ветке и не должна сливаться в `main` до реального staging-прогона. Следующий gate — Raspberry/Linux control plane + отдельный VPS Tor worker, полный `pytest` на exact commit, end-to-end Tor smoke test, fault tests, backup/restore и минимум сутки наблюдения на `concurrency=2`.
+
+Внешние источники кандидатов подключаются только когда их условия использования/лицензия разрешают автоматизированное получение данных. Техническая доступность endpoint сама по себе не означает разрешение на polling/scraping.
 
 ## Базовые технологические решения
 
@@ -74,25 +84,15 @@ flowchart LR
 |---|---|
 | Язык | Python 3.12+ |
 | Tor crawling | Tor daemon + SOCKS на loopback |
-| Fetch/crawl | Scrapy и/или минимальный async HTTP слой через SOCKS |
-| Parsing | lxml / selectolax / BeautifulSoup (окончательный выбор после прототипа) |
+| Fetch/crawl | bounded HTTP(S) fetch через SOCKS, без browser runtime |
+| Parsing | стандартный безопасный HTML parser в v0.1; тяжёлый renderer отсутствует |
 | Хранилище | SQLite, WAL |
 | Полнотекстовый поиск | SQLite FTS5 + BM25 |
-| API | FastAPI |
-| Scheduler | собственный детерминированный scheduler поверх SQLite frontier |
-| Deployment | systemd |
-| Worker | stateless/disposable VPS |
-| JS rendering | отсутствует в v0.1 |
-| LLM | отсутствует в core v0.1 |
-
-## Источники архитектурных идей
-
-При проектировании учитываются существующие open-source решения, в первую очередь Ahmia crawler/search stack и AIL/Lacus. Первая версия OnionAtlas сознательно проще: без Elasticsearch, Redis, браузерной фермы и тяжёлой threat-intelligence платформы.
-
-До переноса стороннего кода в репозиторий необходимо отдельно проверить лицензию конкретных файлов и зафиксировать происхождение в `THIRD_PARTY.md`. На этапе архитектурной документации код сторонних проектов в OnionAtlas не копируется.
+| API control plane | FastAPI |
+| Worker transport | authenticated HTTPS/private overlay |
+| Очередь | persistent SQLite frontier + leases |
+| LLM | не участвует в core pipeline |
 
 ## Статус
 
-Сейчас репозиторий находится на стадии **architecture-first / iteration 0**. Следующий шаг — реализовать минимальный vertical slice:
-
-`seed → Tor fetch → sanitize/parse → SQLite → FTS5 → link discovery → frontier`.
+Проект находится на стадии **v0.1 staging validation**. Код, миграции, persistent frontier, remote worker API, safe fetch, transactional importer, FTS5, link graph, recrawl и generic discovery core уже собраны в feature-ветке. До merge требуется реальный staging report и regression fixes по результатам прогона.
