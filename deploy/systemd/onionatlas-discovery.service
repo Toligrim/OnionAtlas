@@ -1,0 +1,16 @@
+[Unit]
+Description=OnionAtlas discovery and recrawl tick
+After=onionatlas-control.service
+
+[Service]
+Type=oneshot
+User=onionatlas
+Group=onionatlas
+EnvironmentFile=/etc/onionatlas/control.env
+WorkingDirectory=/opt/onionatlas
+ExecStart=/bin/sh -c '/opt/onionatlas/.venv/bin/onionatlas recrawl schedule && /opt/onionatlas/.venv/bin/onionatlas discovery run-due'
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/onionatlas
