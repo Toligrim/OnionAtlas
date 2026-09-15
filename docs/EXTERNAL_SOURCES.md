@@ -2,31 +2,40 @@
 
 OnionAtlas never treats a third-party index as canonical truth. External sources only produce **candidates**. Every candidate is validated, deduplicated, recorded as provenance and then independently checked by the OnionAtlas Tor worker.
 
-## Built-in Ahmia recent-submissions source
+## Source policy
 
-The first v0.1 source is intentionally small and conservative:
+A technically reachable endpoint is not automatically an appropriate automated discovery source.
+
+Before adding a third-party source, verify:
+
+- its Terms of Service or license permit automated retrieval for the intended use;
+- relevant rate limits are known;
+- the source can be queried without credentials being exposed in a URL;
+- the source is not used as canonical truth;
+- polling frequency and response-size limits are conservative.
+
+For the first staging deployment, manual seeds plus link discovery are sufficient. External discovery should be enabled only after the end-to-end crawler loop is proven stable.
+
+## Ahmia
+
+Ahmia is a useful Tor search/reference service and publishes information about onion services. OnionAtlas contains an experimental helper for a recent-submissions endpoint, but it is **not part of the default autonomous staging configuration**.
+
+Ahmia's public Terms of Service currently state that users must not scrape or replicate the service without permission. Therefore do not enable automated Ahmia polling unless the operator has explicit permission covering that use and follows the service's rate/usage requirements.
+
+The existence of the CLI helper must not be interpreted as permission to consume the endpoint automatically.
+
+If permission exists, the candidate pipeline remains:
 
 ```text
-https://ahmia.fi/add/onionsadded/
+Ahmia observation
+→ candidate only
+→ OnionAtlas v3 validation
+→ dedupe/provenance
+→ frontier
+→ independent Tor fetch
 ```
 
-The current Ahmia code exposes this route through `AddListView` as `add/onionsadded/`. It lists onion URLs submitted to Ahmia. Ahmia's own maintenance documentation describes periodic deletion of added onions, so this endpoint is useful as a rolling source of fresh candidates rather than a canonical archive.
-
-Enable it once:
-
-```text
-onionatlas discovery add-ahmia
-```
-
-Default interval: six hours.
-
-After that, the discovery timer calls `discovery run-due`; OnionAtlas extracts v3 onion candidates, verifies their checksum, records the discovery run and evidence, and enqueues new targets for its own Tor crawler.
-
-### Why the full Ahmia onion list is not the default
-
-Ahmia also exposes `/onions/`. Its current `OnionListView` aggregates the index with a configured upper size of hundreds of thousands of domains. Pulling that entire response on every discovery tick is wasteful and would create a large burst of mostly-known candidates.
-
-The full list can later be used as a **one-time/bootstrap import** with streaming and checkpoints, but it is intentionally not part of the first continuous loop.
+Without such permission, use manual seeds, a dataset/API with a suitable license, or another source the operator is authorized to automate.
 
 ## Generic HTTP regex source
 
@@ -54,7 +63,7 @@ The adapter then:
 4. stores run statistics and provenance;
 5. enqueues only OnionAtlas-valid candidates.
 
-This is still an administrator-controlled egress mechanism. Stronger DNS/IP SSRF policy can be added after the first measured staging deployment if external source configuration is exposed beyond trusted administrators.
+This adapter is intended for trusted administrator configuration, not as an unauthenticated public SSRF-style fetch endpoint. If source configuration is ever exposed to untrusted users, DNS/IP-level egress controls must be added before that interface is shipped.
 
 ## Novelty and cooldown
 
