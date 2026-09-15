@@ -38,16 +38,23 @@ onionatlas discovery add-http-source SOURCE_NAME URL_TEMPLATE
 
 If the URL uses `{query}`, multiple `--query` values can be configured.
 
-The adapter:
+The v0.1 adapter deliberately has a narrow network policy:
 
-1. downloads only a bounded text response;
-2. extracts strings that look like v3 onion hostnames;
-3. passes every value through OnionAtlas's cryptographic v3 hostname validator;
-4. deduplicates candidates;
-5. stores run statistics and provenance;
-6. enqueues only OnionAtlas-valid candidates.
+- source URLs must use HTTPS;
+- URL userinfo is rejected;
+- HTTP redirects are not followed;
+- response body is bounded;
+- candidate count is bounded (default 5000 per query/run).
 
-The adapter must not be pointed at untrusted internal URLs. In v0.1 source configuration is administrator-controlled; stronger egress/SSRF policy is part of production hardening.
+The adapter then:
+
+1. extracts strings that look like v3 onion hostnames;
+2. passes every value through OnionAtlas's cryptographic v3 hostname validator;
+3. deduplicates candidates;
+4. stores run statistics and provenance;
+5. enqueues only OnionAtlas-valid candidates.
+
+This is still an administrator-controlled egress mechanism. Stronger DNS/IP SSRF policy can be added after the first measured staging deployment if external source configuration is exposed beyond trusted administrators.
 
 ## Novelty and cooldown
 
@@ -61,7 +68,7 @@ For each run OnionAtlas stores:
 - rejected candidates;
 - novelty rate.
 
-When a source repeatedly returns a sufficiently large set with novelty below the configured v0.1 threshold, it receives a deterministic cooldown instead of being polled aggressively.
+When a source repeatedly returns a sufficiently large set with novelty below the v0.1 threshold, it receives a deterministic cooldown instead of being polled aggressively.
 
 Inspect source state with:
 
