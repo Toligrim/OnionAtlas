@@ -20,7 +20,7 @@ For the first staging deployment, manual seeds plus link discovery are sufficien
 
 Ahmia is a useful Tor search/reference service and publishes information about onion services. OnionAtlas contains an experimental helper for a recent-submissions endpoint, but it is **not part of the default autonomous staging configuration**.
 
-Ahmia's public Terms of Service currently state that users must not scrape or replicate the service without permission. Therefore do not enable automated Ahmia polling unless the operator has explicit permission covering that use and follows the service's rate/usage requirements.
+As checked on 2026-09-15, Ahmia's public Terms of Service state that users must not scrape or replicate the service without permission. Therefore do not enable automated Ahmia polling unless the operator has explicit permission covering that use and follows the service's rate/usage requirements. Re-check the current terms before any future automated integration because third-party policies can change.
 
 The existence of the CLI helper must not be interpreted as permission to consume the endpoint automatically.
 
