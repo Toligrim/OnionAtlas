@@ -2,6 +2,16 @@
 
 Этот документ превращает архитектурную спецификацию в последовательность небольших, проверяемых итераций. Порядок принципиален: сначала корректное персистентное состояние и безопасный сбор данных, затем автономное расширение discovery и только после этого UI.
 
+## Текущее состояние
+
+Ветка `feat/v0.1-vertical-slice` содержит рабочую реализацию итераций 1–5: SQLite/FTS5, persistent frontier, leases, bounded Tor worker, transactional importer, link graph, remote worker API, recrawl и generic external discovery core.
+
+Следующий gate — **staging deployment**, а не merge в `main`.
+
+GitHub Actions в текущем окружении репозитория несколько раз завершался до старта любого шага: jobs имели `runner_id=0`, пустое имя runner и пустой массив steps. Поэтому красный check сам по себе не является результатом выполнения `pytest`. До merge тесты должны быть реально выполнены на staging/control host (и, когда GitHub runner снова начнёт назначаться, в CI).
+
+Точный runbook для OPS-агента: `docs/OPS_AGENT_STAGING.md`.
+
 ## Модель разработки
 
 Разработка идёт в feature-ветках с ревью относительно `main`. Каждая итерация должна оставлять ветку в тестируемом состоянии. Обычный CI не зависит от живых `.onion`-сервисов; реальные Tor-проверки выполняются только как отдельный opt-in smoke test.
@@ -61,7 +71,7 @@
 - canonical-дубликаты не создают новые записи очереди;
 - lease пропавшего worker возвращается в очередь;
 - порядок по priority детерминирован;
-- после рестарта процесс продолжает работу с той же очередью.
+- после рестарта process продолжает работу с той же очередью.
 
 ## Итерация 3 — безопасный Tor acquisition worker
 
@@ -140,30 +150,44 @@ seed A
 - novelty metric;
 - детерминированный cooldown для низкой novelty;
 - scheduler повторного обхода due-сервисов;
-- systemd-шаблоны control plane, worker и discovery timer.
+- systemd-шаблоны control/worker/discovery timer.
 
 Критерии выхода:
 
 - VPS можно уничтожить и создать заново без потери canonical state;
-- при исчерпании link frontier настроенный external source способен добавить новые candidates;
+- при исчерпании link frontier **разрешённый оператору** external source способен добавить новые candidates;
 - ранее известные сервисы автоматически возвращаются на recrawl;
 - повторяющийся источник с низкой novelty сам уходит в cooldown.
 
-## Итерация 6 — production hardening
+External source не включается автоматически только потому, что endpoint технически доступен. Условия использования/лицензия и rate limits источника должны разрешать автоматизированное потребление.
 
-Это следующий этап перед длительным автономным тестом:
+## Итерация 6 — staging + production hardening
 
+Это текущий этап.
+
+Перед длительным автономным тестом выполнить на реальном Raspberry/Linux control plane + VPS worker:
+
+- `python -m compileall -q src tests`;
+- полный `pytest` на exact commit;
 - интеграционный тест реального `control plane ↔ VPS worker`;
-- отдельные/revocable worker credentials;
-- request-body limits на reverse proxy/application boundary;
-- логи с redaction секретов;
-- health-метрики Tor, spool, frontier, SQLite, disk и stale workers;
-- backup/restore команды и проверка восстановления;
-- DB integrity check и rebuild FTS;
-- disk high-watermark policy;
-- graceful draining/shutdown worker;
-- отдельный live-Tor smoke test, отключённый в обычном CI;
-- deployment guide для Raspberry Pi control plane и VPS `1 vCPU / 1 GB RAM`.
+- Tor SOCKS только на loopback;
+- live Tor HTML fetch;
+- FTS поиск после fetch;
+- automatic link discovery;
+- duplicate delivery/idempotency;
+- lease expiration/recovery;
+- worker spool recovery после недоступности control plane;
+- control-plane restart/reboot recovery;
+- SQLite `quick_check` + `foreign_key_check`;
+- online backup + фактическое открытие backup;
+- логи без секретов;
+- проверка disk/RAM baseline;
+- graceful shutdown/draining по мере необходимости;
+- отдельный live-Tor smoke test, не включённый в обычный CI.
+
+Runbook: `OPS_AGENT_STAGING.md` и `STAGING_DEPLOYMENT.md`.
+
+Любой воспроизводимый staging bug исправляется в этой feature-ветке вместе с regression test. PR остаётся незамерженным до прохождения staging gate.
 
 ## Итерация 7 — семидневный autonomous soak test
 
@@ -174,7 +198,7 @@ seed A
 - concurrency worker = 2;
 - ограниченный seed set;
 - link discovery включён;
-- один external discovery source включён;
+- минимум один внешний source — только если его автоматизированное использование разрешено;
 - recrawl включён;
 - никаких ручных адресов только ради поддержания роста базы.
 
@@ -189,6 +213,8 @@ seed A
 - RAM/CPU/disk;
 - рост и целостность SQLite;
 - восстановление после reboot/network failure.
+
+Успех: система самостоятельно продолжает crawl/recrawl/discovery после первоначального запуска и восстанавливается после обычных отказов без ручного ремонта БД/очереди.
 
 ## Итерация 8 — минимальный UI
 
@@ -206,4 +232,4 @@ UI добавляется только после доказанной стаб�
 
 ## Release gate v0.1
 
-v0.1 считается готовой после выполнения Definition of Done из `docs/V0.1_PLAN.md`: persistent frontier, safe fetch, idempotent import, автоматический link discovery, минимум один external source, recrawl, novelty/cooldown, изолированный remote worker и успешный семидневный autonomous soak test.
+v0.1 считается готовой после выполнения Definition of Done из `docs/V0.1_PLAN.md`: persistent frontier, safe fetch, idempotent import, автоматический link discovery, минимум один разрешённый external source, recrawl, novelty/cooldown, изолированный remote worker и успешный семидневный autonomous soak test.
