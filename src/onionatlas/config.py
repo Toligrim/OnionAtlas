@@ -16,6 +16,7 @@ class Settings:
     worker_id: str = "worker-01"
     worker_spool_dir: Path = Path("worker-spool")
     worker_poll_seconds: float = 15.0
+    worker_allow_insecure_control: bool = False
     fetch_connect_timeout_seconds: float = 30.0
     fetch_total_timeout_seconds: float = 90.0
     fetch_max_redirects: int = 3
@@ -36,6 +37,10 @@ class Settings:
             worker_id=os.getenv("ONIONATLAS_WORKER_ID", "worker-01"),
             worker_spool_dir=Path(os.getenv("ONIONATLAS_WORKER_SPOOL", "worker-spool")),
             worker_poll_seconds=float(os.getenv("ONIONATLAS_WORKER_POLL_SECONDS", "15")),
+            worker_allow_insecure_control=os.getenv(
+                "ONIONATLAS_WORKER_ALLOW_INSECURE_CONTROL", "0"
+            ).lower()
+            in {"1", "true", "yes"},
             fetch_connect_timeout_seconds=float(
                 os.getenv("ONIONATLAS_FETCH_CONNECT_TIMEOUT", "30")
             ),
