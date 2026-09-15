@@ -131,20 +131,17 @@ Then enable `deploy/systemd/onionatlas-worker.service`.
 
 ## 6. Initial discovery setup
 
-Add a small, known seed set manually. Do not start with tens of thousands of addresses.
+Start with a small, known seed set manually. Do not start with tens of thousands of addresses and do not enable a third-party discovery service merely because a technically accessible endpoint exists.
 
 ```text
 onionatlas seed add <known-v3-onion-url>
 ```
 
-Optionally enable the lightweight Ahmia fresh-submission feed:
+For the first staging smoke test, manual seeds are sufficient. The generic external discovery adapter should only be connected to an API, feed or dataset that the operator is authorized to consume automatically and whose rate limits/terms are understood.
 
-```text
-onionatlas discovery add-ahmia
-onionatlas discovery stats
-```
+Every external source remains candidate-only: a returned address is validated, deduplicated, recorded as provenance and independently checked by the OnionAtlas Tor worker.
 
-This source is candidate-only. Every returned address is independently crawled through the VPS.
+Ahmia is useful as a reference/search service, but its current public Terms of Service prohibit scraping or replicating the service without permission. Therefore the staging runbook does **not** instruct an operator to poll Ahmia automatically unless explicit permission for that use has been obtained. See `EXTERNAL_SOURCES.md`.
 
 ## 7. First smoke test
 
@@ -240,7 +237,7 @@ Do not start the long autonomous test until:
 - database backup/restore was tested;
 - worker-loss recovery was tested;
 - control-plane restart recovery was tested;
-- discovery source can add candidates;
+- at least one authorized discovery source can add candidates, if external discovery is enabled;
 - recrawl returns completed/offline services to frontier;
 - no public SOCKS port exists;
 - worker token is not sent over public HTTP;
